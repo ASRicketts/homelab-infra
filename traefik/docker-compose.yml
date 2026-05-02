@@ -7,6 +7,9 @@ services:
     container_name: traefik
     restart: unless-stopped
 
+    environment:
+      - DOCKER_API-VERSION=1.45
+
     # Traefik configuration via CLI flags. You can also use a traefik.yml file
     # for this — flags are fine for small setups, files scale better.
     command:
