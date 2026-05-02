@@ -1,0 +1,54 @@
+# Traefik — reverse proxy and "front door" for all services in the homelab.
+# Watches Docker events and auto-routes traffic to containers based on labels.
+
+services:
+  traefik:
+    image: traefik:v3.1
+    container_name: traefik
+    restart: unless-stopped
+
+    # Traefik configuration via CLI flags. You can also use a traefik.yml file
+    # for this — flags are fine for small setups, files scale better.
+    command:
+      # ---- API & Dashboard ----
+      - "--api.dashboard=true"
+      - "--api.insecure=true" # exposes dashboard on :8080 unauthenticated.
+        # FINE for a homelab on a private LAN.
+        # Lock down later by routing through Traefik
+        # itself with auth middleware.
+
+      # ---- Docker provider ----
+      # Tells Traefik to watch Docker events and read labels off containers
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false" # opt-in: a container is only
+        # routed if it has
+        # `traefik.enable=true`
+      - "--providers.docker.network=traefik" # the shared network we made
+
+      # ---- Entrypoints ----
+      # An "entrypoint" is a port Traefik listens on. We'll add HTTPS later.
+      - "--entrypoints.web.address=:80"
+
+      # ---- Logging ----
+      - "--log.level=INFO"
+      - "--accesslog=true" # logs every request — useful for debugging routing
+
+    ports:
+      - "80:80" # HTTP traffic to services Traefik routes
+      - "8080:8080" # Traefik dashboard (insecure for now)
+
+    volumes:
+      # Read-only Docker socket — this is HOW Traefik watches for new containers.
+      # Mounting the socket gives Traefik full Docker API access. Read-only (`:ro`)
+      # limits the blast radius. Still: any container with the socket can be
+      # dangerous if compromised. Acceptable for the front-door reverse proxy.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+    networks:
+      - traefik
+
+# Reference the externally-created network instead of letting compose make one.
+# This is what allows other compose files in other folders to share the network.
+networks:
+  traefik:
+    external: true
