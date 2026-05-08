@@ -1,0 +1,73 @@
+#Gitea - a self hosted Git service
+#Two services: gitea (the app) and postgres (the database)
+#Web traffic routed through Traefik. SSH exposed directly on the host port 222 because port port 22 is in use by the VMs real ssh
+
+services:
+  gitea: 
+    image: gitea/gitea:latest 
+    container_name: gitea
+    restart: unless-stopped 
+    depends_on: 
+      -gitea-db
+    environment: 
+      #Run as user inside the container (matches the volume permissions)
+      - USER_UID=1000
+      - USER_GID=1000
+      
+      #Database connection settings
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=gitea-db:5432
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=gitea
+      - GITEA__database__PASSWD=${GITEA_DB_PASSWORD}
+
+      #Public URL: used for links in emails, etc
+      - GITEA__server__ROOT_URL=http://gitea.lab/
+      - GITEA__server__DOMAIN=gitea.lab
+      - GITEA__sever__SSH_DOMAIN=gitea.lab
+      - GITEA__server__SSH_PORT=222
+      -GITEA__server__SSH_LISTEN_PORT=22
+
+      #Persistent data for all the repositories, config, etc 
+    volumes:
+     - .data:/data
+
+    #Sync timezones with host 
+    - /etc/localtime:/etc/localtime:ro
+    - /etc/timezone:/etc/timezone:ro
+
+    #SSH for git. Web traffic is routed through Traefik, so no need to expose port 3000 here
+    ports:
+      -222:22 #SSH
+
+    networks:
+     -traefik
+
+     labels:
+      - "traefik.enable=true"
+
+      # Web router for the Gitea UI
+      - "traefik.http.routers.gitea.rule=Host(`gitea.lab`)"
+      - "traefik.http.routers.gitea.entrypoints=web"
+
+      # Tell Traefik which port INSIDE the container to send traffic to.
+      # Gitea's web UI runs on 3000.
+      - "traefik.http.services.gitea.loadbalancer.server.port=3000"
+
+  gitea-db:
+    image: postgres:16
+    container_name: gitea-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=gitea
+      - POSTGRES_PASSWORD=${GITEA_DB_PASSWORD}
+      - POSTGRES_DB=gitea
+    volumes:
+      # Persistent database storage. Same lifecycle warning as ./data above.
+      - ./db-data:/var/lib/postgresql/data
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
