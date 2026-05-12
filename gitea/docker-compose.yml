@@ -26,7 +26,7 @@ services:
       - GITEA__server__DOMAIN=gitea.lab
       - GITEA__sever__SSH_DOMAIN=gitea.lab
       - GITEA__server__SSH_PORT=222
-      -GITEA__server__SSH_LISTEN_PORT=22
+      - GITEA__server__SSH_LISTEN_PORT=22
 
       #Persistent data for all the repositories, config, etc 
     volumes:
