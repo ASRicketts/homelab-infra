@@ -1,0 +1,62 @@
+# Woodpecker CI — CI/CD server + agent.
+# Server listens for Gitea webhooks, dispatches jobs to the agent.
+# Agent runs each pipeline step in a Docker container.
+
+services:
+  woodpecker-server:
+    image: woodpeckerci/woodpecker-server:v3
+    container_name: woodpecker-server
+    restart: unless-stopped
+    environment:
+      # Gitea integration
+      - WOODPECKER_OPEN=true
+      - WOODPECKER_HOST=http://woodpecker.lab
+      - WOODPECKER_GITEA=true
+      - WOODPECKER_GITEA_URL=http://gitea.lab # how Woodpecker reaches Gitea
+      - WOODPECKER_GITEA_CLIENT=${WOODPECKER_GITEA_CLIENT}
+      - WOODPECKER_GITEA_SECRET=${WOODPECKER_GITEA_SECRET}
+
+      # Agent server commumicationnication secret (must match agent's)
+      - WOODPECKER_AGENT_SECRET=${WOODPECKER_AGENT_SECRET}
+
+      # Admin users (gets admin rights in Woodpecker UI)
+      - WOODPECKER_ADMIN=asricketts # My Gitea username
+
+    volumes:
+      # Persistent storage for Woodpecker's SQLite db (pipeline history, etc.)
+      - ./server-data:/var/lib/woodpecker
+
+    networks:
+      - traefik
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.woodpecker.rule=Host(`woodpecker.lab`)"
+      - "traefik.http.routers.woodpecker.entrypoints=web"
+      - "traefik.http.services.woodpecker.loadbalancer.server.port=8000"
+
+  woodpecker-agent:
+    image: woodpeckerci/woodpecker-agent:v3
+    container_name: woodpecker-agent
+    restart: unless-stopped
+    depends_on:
+      - woodpecker-server
+    command: agent
+    environment:
+      # Talk to the server over gRPC on its internal port
+      - WOODPECKER_SERVER=woodpecker-server:9000
+      - WOODPECKER_AGENT_SECRET=${WOODPECKER_AGENT_SECRET}
+
+      # How many concurrent pipeline steps this agent can run
+      - WOODPECKER_MAX_WORKFLOWS=2
+
+    volumes:
+      # The agent needs the Docker socket — it spins up containers per step
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
