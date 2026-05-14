@@ -12,7 +12,7 @@ services:
       - WOODPECKER_OPEN=true
       - WOODPECKER_HOST=http://woodpecker.lab
       - WOODPECKER_GITEA=true
-      - WOODPECKER_GITEA_URL=http://gitea:3000 # how Woodpecker reaches Gitea
+      - WOODPECKER_GITEA_URL=http://gitea.lab # how Woodpecker reaches Gitea
       - WOODPECKER_GITEA_CLIENT=${WOODPECKER_GITEA_CLIENT}
       - WOODPECKER_GITEA_SECRET=${WOODPECKER_GITEA_SECRET}
 
@@ -21,6 +21,13 @@ services:
 
       # Admin users (gets admin rights in Woodpecker UI)
       - WOODPECKER_ADMIN=asricketts # My Gitea username
+
+    extra_hosts:
+      # Map gitea.lab to the VM's host gateway, which Traefik is listening on.
+      # Lets the Woodpecker container resolve gitea.lab the same way a browser
+      # on the LAN does. Without this, Docker's internal DNS has no idea what
+      # gitea.lab is and the OAuth token exchange call fails.
+      - "gitea.lab:host-gateway"
 
     volumes:
       # Persistent storage for Woodpecker's SQLite db (pipeline history, etc.)
