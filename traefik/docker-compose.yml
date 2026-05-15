@@ -45,7 +45,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
     networks:
-      - traefik
+      traefik:
+        aliases:
+          - gitea.lab
+          - woodpecker.lab
 
 # Reference the externally-created network instead of letting compose make one.
 # This is what allows other compose files in other folders to share the network.
