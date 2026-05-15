@@ -53,9 +53,15 @@ services:
       # Talk to the server over gRPC on its internal port
       - WOODPECKER_SERVER=woodpecker-server:9000
       - WOODPECKER_AGENT_SECRET=${WOODPECKER_AGENT_SECRET}
+      - WOODPECKER_BACKEND_DOCKER_NETWORK=traefik # the network agent-launched containers will join
 
       # How many concurrent pipeline steps this agent can run
       - WOODPECKER_MAX_WORKFLOWS=2
+
+    extra_hosts:
+      - "gitea.lab:host-gateway" # If the pipelines need to talk to Gitea (e.g. to clone repos), this lets
+      # agent-launched containers resolve gitea.lab the same way a browser on the
+      # LAN does. Without this, Docker's internal DNS has no idea what gitea.lab is and git clone
 
     volumes:
       # The agent needs the Docker socket — it spins up containers per step
