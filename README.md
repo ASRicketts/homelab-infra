@@ -12,5 +12,38 @@ Woodpecker CI — CI/CD pipelines triggered by Gitea pushes
 In Progress (see commit history for build log.)
 
 # Architecture
-Diagram coming when everyting is set
 
+
+
+## 🏠 Homelab Architecture
+
+```text
+╔════════════════════════════════════════════════════╗
+║                 🏠 HOMELAB STACK                  ║
+║        Proxmox → Ubuntu VM → Docker Services      ║
+╚════════════════════════════════════════════════════╝
+
+🖥️  Proxmox Host
+│
+└── 🐧 Ubuntu 24.04 VM
+    │
+    └── 🐳 Docker
+        │
+        ├── 🌐 Traefik              Reverse Proxy :80 / :8080
+        ├── 🦊 Gitea                Self-hosted Git, SSH :222
+        ├── 🐘 Postgres             Database backend
+        ├── 🪵 Woodpecker Server    CI/CD server
+        ├── 🛠️ Woodpecker Agent     Pipeline runner
+        └── 🧪 whoami               Routing test service
+
+| Service              | Purpose                   | Notes                          |
+| -------------------- | ------------------------- | ------------------------------ |
+| 🖥️ Proxmox          | Bare-metal virtualization | Running on spare laptop        |
+| 🐧 Ubuntu 24.04 VM   | Docker host               | Main server VM                 |
+| 🐳 Docker            | Container runtime         | Runs all homelab services      |
+| 🌐 Traefik           | Reverse proxy             | Ports `80` and `8080`          |
+| 🦊 Gitea             | Self-hosted Git           | SSH exposed on port `222`      |
+| 🐘 Postgres          | Database                  | Backend for Gitea              |
+| 🪵 Woodpecker Server | CI/CD server              | Connects to Gitea              |
+| 🛠️ Woodpecker Agent | CI/CD runner              | Executes pipelines             |
+| 🧪 whoami            | Test container            | Used to verify Traefik routing |
